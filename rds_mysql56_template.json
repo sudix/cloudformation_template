@@ -1,0 +1,118 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "MySQL RDS Template",
+    "Parameters": {
+        "DBName": {
+            "Type"    : "String",
+            "Default" : "MyDB"
+        },
+        "DBInstanceClass": {
+            "Type"    : "String",
+            "Default" : "db.t2.micro"
+        },
+        "StorageType": {
+            "Type"           : "String",
+            "Default"        : "gp2",
+	    "AllowedValues"  : [ "gp2", "standard", "io1" ]
+        },
+        "IOPS": {
+            "Type"           : "String",
+            "Default"        : "",
+	    "AllowedPattern" : "[0-9]*"
+        },
+        "AllocatedStorage": {
+            "Type"           : "String",
+            "Default"        : "5",
+	    "AllowedPattern" : "[0-9]*"
+        },
+	"MasterUserName": {
+            "Type"           : "String",
+            "Default"        : "root",
+	    "AllowedPattern" : "[a-zA-Z0-9]*"
+        },
+	"MasterUserPassword": {
+            "Type"           : "String",
+            "Default"        : "xxxxxxxxxxxxxx",
+	    "MinLength"      : "10",
+	    "AllowedPattern" : "[-_$%&'#a-zA-Z0-9]*"
+        },
+	"PubliclyAccessible" : { 
+	    "Description"   : "PubliclyAccessible Setting",
+	    "Type"          : "String",
+	    "Default"       : "false",
+	    "AllowedValues" : [ "true", "false" ]
+	},
+        "DBSecurityGroupID": {
+            "Type"    : "AWS::EC2::SecurityGroup::Id",
+            "Default" : "sg-yyyyyyyy"
+        },
+	"SubnetID1" : { 
+	    "Description" : "Subnet ID to add DBSubnetGroup",
+	    "Type"    : "AWS::EC2::Subnet::Id",
+	    "Default" : "subnet-yyyyyyyy"
+	},
+	"SubnetID2" : { 
+	    "Description" : "Subnet ID to add DBSubnetGroup",
+	    "Type"    : "AWS::EC2::Subnet::Id",
+	    "Default" : "subnet-yyyyyyyy"
+	}
+    },
+    "Resources": {
+        "DBParameterGroup": {
+	    "Type": "AWS::RDS::DBParameterGroup",
+	    "Properties" : {
+		"Description" : "MySQL 5.6 parameters",
+		"Family" : "mysql5.6",
+		"Parameters" : {
+		    "init_connect"             : "SET NAMES utf8mb4;",
+		    "character_set_client"     : "utf8mb4",
+		    "character_set_connection" : "utf8mb4",
+		    "character_set_database"   : "utf8mb4",
+		    "character_set_results"    : "utf8mb4",
+		    "character_set_server"     : "utf8mb4",
+		    "collation_connection"     : "utf8mb4_general_ci",
+		    "innodb_large_prefix"      : "1",
+		    "innodb_file_per_table"    : "1",
+		    "innodb_file_format"       : "Barracuda",
+		    "skip-character-set-client-handshake": "1"
+		},
+		"Tags" : [
+		    {"Key" : "Name", "Value" : { "Fn::Join" : [ "", [ "param-", { "Ref" : "DBName" } ] ] } }
+		]
+	    }
+	},
+	"DBSubnetGroup" : {
+            "Type" : "AWS::RDS::DBSubnetGroup",
+            "Properties" : {
+		"DBSubnetGroupDescription" : "DBSubnetGroup",
+		"SubnetIds" : [ { "Ref": "SubnetID1"}, { "Ref": "SubnetID2"} ],
+		"Tags" : [
+		    {"Key" : "Name", "Value" : { "Fn::Join" : [ "", [ "subnetgroup-", { "Ref" : "DBName" } ] ] } }
+		]
+            }
+	},
+        "DBInstance": {
+            "Type": "AWS::RDS::DBInstance",
+            "Properties": {
+                "Engine"              : "MySQL",
+                "EngineVersion"       : "5.6",
+		"MultiAZ"             : "true",
+		"PubliclyAccessible"  : { "Ref": "PubliclyAccessible" },
+                "StorageType"         : { "Ref": "StorageType" },
+                "AllocatedStorage"    : { "Ref": "AllocatedStorage" },
+                "Iops"                : { "Ref": "IOPS" },
+		"MasterUsername"      : { "Ref": "MasterUserName" },
+                "MasterUserPassword"  : { "Ref": "MasterUserPassword" },
+                "DBInstanceClass"     : { "Ref": "DBInstanceClass" },
+		"DBParameterGroupName": { "Ref": "DBParameterGroup" },
+                "DBSubnetGroupName"   : { "Ref": "DBSubnetGroup" },
+                "DBInstanceIdentifier": { "Ref": "DBName" },
+                "VPCSecurityGroups"   : [ { "Ref": "DBSecurityGroupID"} ],
+		"Tags" : [
+		    {"Key" : "Name", "Value" : { "Ref" : "DBName" } }
+		]
+            },
+            "DeletionPolicy": "Snapshot"
+        }
+    }
+}
